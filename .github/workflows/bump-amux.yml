@@ -1,0 +1,63 @@
+name: Bump amux formula
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch latest release tag
+        id: latest
+        run: |
+          set -euo pipefail
+          repo="andyrewlee/amux"
+          tag=$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" | jq -r '.tag_name')
+          if [[ -z "$tag" || "$tag" == "null" ]]; then
+            echo "Failed to fetch latest release tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Read current formula tag
+        id: current
+        run: |
+          set -euo pipefail
+          current=$(grep -E '^  url ' Formula/amux.rb | sed -E 's|.*tags/([^"/]+)\.tar\.gz"|\1|')
+          if [[ -z "$current" ]]; then
+            echo "Failed to parse current tag from Formula/amux.rb" >&2
+            exit 1
+          fi
+          echo "tag=$current" >> "$GITHUB_OUTPUT"
+
+      - name: Update formula
+        if: steps.latest.outputs.tag != steps.current.outputs.tag
+        run: |
+          set -euo pipefail
+          tag="${{ steps.latest.outputs.tag }}"
+          url="https://github.com/andyrewlee/amux/archive/refs/tags/${tag}.tar.gz"
+          tmpfile=$(mktemp)
+          curl -fsSL "$url" -o "$tmpfile"
+          sha=$(sha256sum "$tmpfile" | awk '{print $1}')
+          rm -f "$tmpfile"
+
+          sed -i "s|^  url \".*\"|  url \"$url\"|" Formula/amux.rb
+          sed -i "s|^  sha256 \".*\"|  sha256 \"$sha\"|" Formula/amux.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/amux.rb
+          git commit -m "Bump amux to ${tag}"
+          git push
+
+      - name: No update needed
+        if: steps.latest.outputs.tag == steps.current.outputs.tag
+        run: echo "Formula already up to date (${{ steps.current.outputs.tag }})"
