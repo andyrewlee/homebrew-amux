@@ -1,8 +1,8 @@
 class Amux < Formula
   desc "TUI for running parallel coding agents"
   homepage "https://github.com/andyrewlee/amux"
-  url "https://github.com/andyrewlee/amux/archive/refs/tags/v0.0.15.tar.gz"
-  sha256 "305265e84930bc2308eab4d40c0fb1a376b4ddd0bc86e05ce89879a7380e41a7"
+  url "https://github.com/andyrewlee/amux/archive/refs/tags/v0.0.16.tar.gz"
+  sha256 "41bce8e065bab2bc4bcef6d2f5f49b9ae96ff9fc5680a4e085e37b6c0436643b"
   license "MIT"
 
   depends_on "go" => :build
